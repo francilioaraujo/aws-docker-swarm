@@ -1,0 +1,16 @@
+# AWS Docker Swarm
+
+This repository shows a very basic code to spin up a docker swarm cluster
+in AWS. This code is purposely basic and shouldn't be used in production
+unmodified.
+
+The infrastructure provisioning code is inside the `terraform`
+directory. You must have a pair of authentication keys in your computer
+to access the instances. The code creates two groups of instances,
+managers and workers.
+
+the infrastructure configuration code is inside the `ansible`
+directory. It installs docker, its dependencies and set up a swarm
+cluster. You can access the docker engine inside the manager nodes using
+ssh by setting the `DOCKER_HOST=ssh://ubuntu@<a master ip>` environment
+variable or adding `-H ssh://ubuntu@<a master ip>` to your docker client.
