@@ -1,0 +1,68 @@
+- name: Install docker engine on all hosts
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install dependencies
+      apt:
+        update_cache: yes
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common
+          - python3-pip
+    - name: Pip dependencies
+      pip:
+        name: docker
+    - name: Add apt key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+    - name: Add repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        filename: docker-ce
+    - name: Install docker-ce
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+- name: Configure users
+  hosts: tag_role_manager
+  become: yes
+  tasks:
+    - name: Add user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+- name: Initialize cluster
+  hosts: manager0
+  become: yes
+  tasks:
+    - name: Init swarm cluster in manager0
+      docker_swarm: {}
+      register: manager_info
+- name: Join managers
+  hosts: tag_role_manager
+  become: yes
+  tasks:
+    - name: Joining nodes
+      docker_swarm:
+        state: join
+        advertise_addr: "{{ ansible_facts['default_ipv4']['address'] }}"
+        join_token: "{{ hostvars['manager0']['manager_info']['swarm_facts']['JoinTokens']['Manager'] }}"
+        remote_addrs:
+          - "{{ hostvars['manager0']['ansible_facts']['default_ipv4']['address'] }}"
+- name: Join workers
+  hosts: tag_role_worker
+  become: yes
+  tasks:
+    - name: Joining nodes
+      docker_swarm:
+        state: join
+        advertise_addr: "{{ ansible_facts['default_ipv4']['address'] }}"
+        join_token: "{{ hostvars['manager0']['manager_info']['swarm_facts']['JoinTokens']['Worker'] }}"
+        remote_addrs:
+          - "{{ hostvars['manager0']['ansible_facts']['default_ipv4']['address'] }}"
